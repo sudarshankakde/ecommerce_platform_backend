@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 
-from .models import User, WholesalerProfile, RetailerProfile,Category, Product, ProductImage, ProductReview,Order
+from .models import User, WholesalerProfile, RetailerProfile,Category, Product, ProductImage, ProductReview,Order,Brand
 class UserAdmin(BaseUserAdmin):
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
@@ -20,3 +20,4 @@ admin.site.register(Product)
 admin.site.register(ProductImage)
 admin.site.register(ProductReview)
 admin.site.register(Order)
+admin.site.register(Brand)

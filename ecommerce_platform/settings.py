@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'cloudinary_storage',
+     'cloudinary',
     'rest_framework',
     'api',
     'corsheaders',
@@ -118,8 +120,9 @@ USE_TZ = False
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = "static/"
+
 MEDIA_ROOT = BASE_DIR / 'media'
-MEDIA_URL = '/media/'
+MEDIA_URL = '/media/'  # or any prefix you choose
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -149,14 +152,10 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME_LATE_USER': timedelta(days=30),
 }
 
-RAZORPAY_KEY_ID = 'your_razorpay_key_id'
-RAZORPAY_KEY_SECRET = 'your_razorpay_key_secret'
-
-
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:5173",# your frontend URL
-    "https://your-production-url.com",  # your production frontend URL
+    "https://ecommerce-frontend-sable-seven.vercel.app/",  # your production frontend URL
 ]
 CORS_ALLOW_METHODS = [
     "GET",
@@ -175,3 +174,25 @@ CORS_ALLOW_HEADERS = [
 
 RAZORPAY_KEY_ID = 'rzp_test_3BgqjzapRPzNgT'
 RAZORPAY_KEY_SECRET = 'jyAzWIFF2Au4XRxvmgipcEN8'
+
+
+
+
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'dpgsqdi7d',
+    'API_KEY': '367234798842138',
+    'API_SECRET': 'WUBsAEG8GlKCijVM0kzcZfGNTeA'
+}
+
+
+import cloudinary
+cloudinary.config(
+    cloud_name="dpgsqdi7d",
+    api_key="367234798842138",
+    api_secret="WUBsAEG8GlKCijVM0kzcZfGNTeA",
+    api_proxy="http://proxy.server:3128"
+)
+
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'

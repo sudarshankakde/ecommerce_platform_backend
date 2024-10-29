@@ -1,8 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import UserSerializer, WholesalerProfileSerializer, RetailerProfileSerializer,ProductSerializer,ProductReviewSerializer
-from .models import WholesalerProfile, RetailerProfile,Product
+from .serializers import UserSerializer, WholesalerProfileSerializer, RetailerProfileSerializer,ProductSerializer,ProductReviewSerializer , BrandSerializer
+from .models import WholesalerProfile, RetailerProfile,Product ,Brand
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import authenticate
@@ -44,12 +44,17 @@ class LoginView(APIView):
                 return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
             elif user.is_retailer and user_type != 'retailer':
                 return Response({'error': 'Invalid user type'}, status=status.HTTP_400_BAD_REQUEST)
-
+            else:
+              if user.is_wholesaler:
+                verfied = get_object_or_404(WholesalerProfile, user=user).verified
+              elif user.is_retailer:
+                verfied = get_object_or_404(RetailerProfile, user=user).verified
             # If user is authenticated and user type is valid
             refresh = RefreshToken.for_user(user)
             return Response({
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
+                'verified': verfied
             }, status=status.HTTP_200_OK)
 
         return Response({'error': 'Invalid Credentials'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -125,7 +130,8 @@ class ProductListView(generics.ListAPIView):
         # Combine the serialized product and category data into a single response
         responseData = {
             'products': product_serializer.data,
-            'categories': category_serializer.data
+            'categories': category_serializer.data,
+            'brands': BrandSerializer(Brand.objects.all(), many=True).data
         }
         
         # Return response with combined data
@@ -342,8 +348,14 @@ from rest_framework.decorators import api_view, permission_classes
 @permission_classes([AllowAny])
 def categories_view(request):
     categories = Category.objects.all()
+    brands = Brand.objects.all()
+    brandSerializer = BrandSerializer(brands, many=True)
     serializer = CategorySerializer(categories, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    response_data = {
+        'categories': serializer.data,
+        'brands': brandSerializer.data
+    }
+    return Response(response_data, status=status.HTTP_200_OK)
   
   
 

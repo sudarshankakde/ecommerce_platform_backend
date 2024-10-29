@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
-from .models import WholesalerProfile, RetailerProfile,Product, Category, ProductImage,ProductReview
+from .models import WholesalerProfile, RetailerProfile,Product, Category, ProductImage,ProductReview , Brand
 
 User = get_user_model()
 
@@ -42,8 +42,7 @@ class WholesalerProfileSerializer(serializers.ModelSerializer):
             'verified',
             'logo'
         ]
-        
-        
+  
 class RetailerProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = RetailerProfile
@@ -63,12 +62,20 @@ class RetailerProfileSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description']
+        fields = ['id', 'name', 'description','icon']
 
+class BrandSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ['id', 'name', 'description','icon']
 class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = [ 'image', 'is_main']
+    def to_representation(self, instance):
+          representation = super().to_representation(instance)
+          representation['image'] = instance.image.url  # Ensure the URL is returned
+          return representation
         
 class ProductReviewSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only = True)
@@ -81,6 +88,7 @@ class ProductSerializer(serializers.ModelSerializer):
     average_rating = serializers.FloatField(read_only=True)
     review_count = serializers.IntegerField(read_only=True)
     category = CategorySerializer(read_only=True)
+    brand = BrandSerializer(read_only=True)
     class Meta:
         model = Product
         fields = [
@@ -97,7 +105,8 @@ class ProductSerializer(serializers.ModelSerializer):
             'images',
             'creator',  
             'average_rating', 
-            'review_count'
+            'review_count',
+            'brand'
         ]
         read_only_fields = ['creator'] 
 
@@ -126,7 +135,6 @@ class ProductSerializer(serializers.ModelSerializer):
                 ProductImage.objects.create(product=instance, image=image)
 
         return instance
-      
       
       
       

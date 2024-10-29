@@ -35,7 +35,6 @@ from .wholesaler_view import (
 )
 
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-
 urlpatterns = [
     # Authantication
     path('login/', LoginView.as_view(), name='login'),

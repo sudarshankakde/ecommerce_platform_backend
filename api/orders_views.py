@@ -24,12 +24,13 @@ class RetailerOrderListView(generics.ListAPIView):
         user = self.request.user
         # Filter orders where the order belongs to the retailer
         return Order.objects.filter(user=user)
-      
+
 from rest_framework import generics, permissions
 import razorpay
 from django.conf import settings
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
+from decimal import Decimal
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def create_order(request):
@@ -44,6 +45,7 @@ def create_order(request):
             product = Product.objects.get(id=item['product'])
             quantity = item['quantity']
             total_price += product.price * quantity
+
         except Product.DoesNotExist:
             return Response({"error": f"Product with id {item['product']} does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -54,11 +56,13 @@ def create_order(request):
 
         # Initialize Razorpay client
         razorpay_client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
+        total_price_decimal = Decimal(total_price)
+        charge_amount = total_price_decimal * Decimal(0.03) * Decimal(100)
 
         # Create Razorpay order (amount should be in paise, so multiply by 100)
         try:
             razorpay_order = razorpay_client.order.create({
-                "amount": int(total_price * 100),  # Amount in paise
+                "amount": int((total_price * 100) + charge_amount),
                 "currency": "INR",
                 "payment_capture": 1  # Auto capture after payment
             })
@@ -72,10 +76,10 @@ def create_order(request):
                 "order_id": order.id,
                 "razorpay_order_id": razorpay_order['id'],
                 "razorpay_key": settings.RAZORPAY_KEY_ID,
-                "amount": total_price * 100,  # Send amount in paise
+                "amount": int(total_price_decimal * Decimal(100)),    # Send amount in paise
                 "currency": "INR"
             }, status=status.HTTP_201_CREATED)
-        
+
         except Exception as e:
             return Response({"error": "Failed to create Razorpay order", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -109,11 +113,11 @@ class RazorpayPaymentVerifyView(APIView):
             order.save()
 
             return Response({"status": "Payment successful and order confirmed"})
-        
+
         except razorpay.errors.SignatureVerificationError:
             return Response({"status": "Payment verification failed"}, status=400)
-          
-          
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def order_list_view(request):
@@ -125,9 +129,9 @@ def order_list_view(request):
 
     # Return the response with the serialized data
     return Response(serializer.data, status=status.HTTP_200_OK)
-  
-  
-  
+
+
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status
@@ -142,10 +146,10 @@ def cart_detail_view(request):
     """Retrieve the cart for the logged-in user, creating it if it doesn't exist."""
     # Try to get the cart for the logged-in user
     cart, created = Cart.objects.get_or_create(user=request.user)
-    
+
     # Serialize the cart data
     serializer = CartSerializer(cart)
-    
+
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -170,7 +174,7 @@ def cart_item_create_view(request):
             cart_item.quantity += request.data.get('quantity', 1)
             cart_item.save()
         return Response(CartItemSerializer(cart_item).data, status=status.HTTP_201_CREATED)
-    
+
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['DELETE'])
@@ -183,7 +187,7 @@ def cart_item_delete_view(request, item_id):
         return Response(status=status.HTTP_204_NO_CONTENT)
     except CartItem.DoesNotExist:
         return Response({"detail": "Cart item not found."}, status=status.HTTP_404_NOT_FOUND)
-      
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def order_details(request, id):

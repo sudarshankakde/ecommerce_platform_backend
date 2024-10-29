@@ -1,7 +1,7 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Category, WholesalerProfile, RetailerProfile, Product, Order, OrderItem
+from .models import Category, WholesalerProfile, RetailerProfile, Product, Order, OrderItem,Brand
 from rest_framework import generics, permissions
 from rest_framework.exceptions import PermissionDenied
 from django.contrib.auth import authenticate
@@ -238,56 +238,79 @@ def product_delete(request, pk):
     product.delete()
     return JsonResponse({'message': 'Product deleted successfully'})
 
-from django.core.files.base import ContentFile
+import cloudinary
+import cloudinary.uploader
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
 import base64
+
 @csrf_exempt
 @api_view(['POST'])
 def create_product(request):
-        # Get the data from the request
-        data = request.data
-        # Get or create the category
-        category_id = data['category']  # This is the string ID from the payload
-        category, created = Category.objects.get_or_create(
-            id=category_id,  # Use the category ID directly
-            defaults={
-                # Optional: if you want to create it with a name and description,
-                # you can pass these as well, but these should be available in the payload
-                'name': data.get('category_name', 'Default Category Name'),  # Provide a default if not present
-                'description': data.get('category_description', '')  # Provide a default if not present
-            }
-        )
+    data = request.data
 
+    # Get or create the category
+    category_id = data['category']
+    brand_id = data.get('brand')
 
-        # Create the product
-        product = Product.objects.create(
-            name=data['name'],
-            category=category,
-            product_type=data['product_type'],
-            description=data['description'],
-            price=data['price'],
-            stock=data['stock'],
-            creator=request.user,
-            specifications=data['specifications'],
-            is_deal_of_the_day=False
-        )
+    category, created = Category.objects.get_or_create(
+        id=category_id,
+        defaults={
+            'name': data.get('category_name', 'Default Category Name'),
+            'description': data.get('category_description', '')
+        }
+    )
 
-       # Handle images if 'images' key is present
-        if 'images' in data:
-            for img_data in data['images']:
-                image_content = img_data.get('image')  # Use get to avoid KeyError
-                is_main = img_data.get('is_main', False)  # Default to False if 'is_main' not provided
-                
-                if image_content:  # Ensure there's actual image data
-                    product_image = ProductImage.objects.create(
-                        image=ContentFile(base64.b64decode(image_content), name='product_image.jpg'),  # Adjust file name
-                        is_main=is_main
-                    )
-                    product.images.add(product_image)
-        else:
-            # Handle the case where 'images' key is not present
-            print("No images provided in the payload.")
-        product.save()
+    brand, created = Brand.objects.get_or_create(
+        id=brand_id,
+        defaults={
+            'name': data.get('brand_name', 'Default Brand Name'),
+            'description': data.get('brand_description', '')
+        }
+    )
 
-        return Response({"message": "Product created successfully"}, status=status.HTTP_201_CREATED)
+    # Create the product
+    product = Product.objects.create(
+        name=data['name'],
+        category=category,
+        product_type=data['product_type'],
+        description=data['description'],
+        price=data['price'],
+        stock=data['stock'],
+        creator=request.user,
+        specifications=data['specifications'],
+        is_deal_of_the_day=False,
+        brand=brand
+    )
 
-    
+    # Handle images if 'images' key is present
+    if 'images' in data:
+        for img_data in data['images']:
+            image_content = img_data.get('image')
+            is_main = img_data.get('is_main', False)
+
+            if image_content:
+                # Clean the Base64 string if it contains a header
+                if image_content.startswith('data:image/'):
+                    image_content = image_content.split(',')[1]
+
+                # Decode the Base64 string
+                image_data = base64.b64decode(image_content)
+
+                # Upload to Cloudinary
+                cloudinary_response = cloudinary.uploader.upload(image_data, resource_type="image")
+
+                # Create a ProductImage instance
+                product_image = ProductImage.objects.create(
+                    image=cloudinary_response['secure_url'],  # Use the URL returned by Cloudinary
+                    is_main=is_main
+                )
+                product.images.add(product_image)
+
+    else:
+        print("No images provided in the payload.")
+
+    product.save()
+
+    return Response({"message": "Product created successfully"}, status=status.HTTP_201_CREATED)

@@ -11,7 +11,7 @@ class User(AbstractUser):
       
       
 
-
+from cloudinary.models import CloudinaryField
 class WholesalerProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE,limit_choices_to={'is_wholesaler': True})
     company_name = models.CharField(max_length=255)
@@ -19,7 +19,7 @@ class WholesalerProfile(models.Model):
     address = models.TextField()
     company_description = models.TextField(blank=True, null=True)
     years_in_business = models.IntegerField(null=True, blank=True)
-    logo = models.ImageField(blank=True, null=True,upload_to='WholeSaler/')
+    logo = CloudinaryField('logo', blank=True, null=True)  # Use CloudinaryField
     contact_number = models.CharField(max_length=15)
     # Additional fields for credibility and social proof
     total_sales = models.IntegerField(default=0)
@@ -57,6 +57,16 @@ class Category(models.Model):
     name = models.CharField(max_length=255, unique=True)
     description = models.TextField(blank=True, null=True)
     is_featured = models.BooleanField(default=False)
+    icon = CloudinaryField('WholeSetail/category_images', blank=True, null=True)  # Use CloudinaryField
+    
+    def __str__(self):
+        return self.name
+
+class Brand(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+    is_featured = models.BooleanField(default=False)
+    icon = CloudinaryField('WholeSetail/Brand_icon', blank=True, null=True)  # Use CloudinaryField
     def __str__(self):
         return self.name
 
@@ -87,12 +97,13 @@ class Product(models.Model):
     images = models.ManyToManyField('ProductImage', blank=True, related_name='products')  # Added related_name
     specifications = models.TextField(blank=True, null=True)  # For HTML content
     is_deal_of_the_day = models.BooleanField(default=False)
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT,related_name='products' , blank=True, null=True)
     def __str__(self):
         return self.name
 
 
 class ProductImage(models.Model):
-    image = models.ImageField(upload_to='product_images/')
+    image = CloudinaryField('image') 
     is_main = models.BooleanField(default=False)
 
     def __str__(self):
@@ -131,7 +142,8 @@ class Order(models.Model):
     state = models.CharField(max_length=25)
     portal_code = models.DecimalField(max_digits=6, decimal_places=0)
     order_status_description = models.TextField(blank=True, null=True)
-
+    
+    
     order_notes = models.TextField(blank=True,null=True)
     razorpay_order_id = models.CharField(max_length=100, blank=True, null=True)
     
